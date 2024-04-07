@@ -99,7 +99,7 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             output_size=self.ac_dim,
             n_layers=self.n_layers, size=self.size,
         )
-        self.mean_net.to(ptu.device)
+        self.mean_net.to(ptu.device) #GPU or CPU upload
         self.logstd = nn.Parameter(
 
             torch.zeros(self.ac_dim, dtype=torch.float32, device=ptu.device)
@@ -129,6 +129,14 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
         # through it. For example, you can return a torch.FloatTensor. You can also
         # return more flexible objects, such as a
         # `torch.distributions.Distribution` object. It's up to you!
+        # if self.discrete:
+        #     return self.logits_na(observation)
+
+        # mean = self.mean_net(observation)
+        # dist = distributions.Normal(mean, torch.exp(self.logstd))
+        # sample = dist.rsample()
+        return self.mean_net(observation)
+            
         raise NotImplementedError
 
     def update(self, observations, actions):
@@ -141,8 +149,18 @@ class MLPPolicySL(BasePolicy, nn.Module, metaclass=abc.ABCMeta):
             dict: 'Training Loss': supervised learning loss
         """
         # TODO: update the policy and return the loss
-        loss = TODO
+        self.optimizer.zero_grad()
+        pred_actions = self.forward(ptu.from_numpy(observations))
+        # loss = nn.MSELoss(pred_actions, ptu.from_numpy(actions)).to(ptu.device)
+        loss_fn = nn.MSELoss() 
+        loss = loss_fn(pred_actions, ptu.from_numpy(actions))
+        loss.backward()
+        self.optimizer.step()
         return {
             # You can add extra logging information here, but keep this line
             'Training Loss': ptu.to_numpy(loss),
         }
+# python cs285/scripts/run_hw1.py --expert_policy_file cs285/policies/experts/Ant.pkl --env_name Ant-v4 --exp_name bc_ant --n_iter 1 --expert_data cs285/expert_data/expert_data_Ant-v4.pkl --video_log_freq -1
+# python cs285/scripts/run_hw1.py --expert_policy_file cs285/policies/experts/Ant.pkl --env_name Ant-v4 --exp_name dagger_ant --n_iter 10 --do_dagger --expert_data cs285/expert_data/expert_data_Ant-v4.pkl --video_log_freq -1 --ep_len 200
+# python cs285/scripts/run_hw1.py --expert_policy_file cs285/policies/experts/HalfCheetah.pkl --env_name HalfCheetah-v4 --exp_name bc_ant --n_iter 1 --expert_data cs285/expert_data/expert_data_HalfCheetah-v4.pkl --video_log_freq -1
+# python cs285/scripts/run_hw1.py --expert_policy_file cs285/policies/experts/HalfCheetah.pkl --env_name HalfCheetah-v4 --exp_name dagger_ant --n_iter 10 --do_dagger --expert_data cs285/expert_data/expert_data_HalfCheetah-v4.pkl --video_log_freq -1 --ep_len 5000 --batch_size 50000
