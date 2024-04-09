@@ -74,8 +74,8 @@ class MLPPolicy(nn.Module):
         flexible objects, such as a `torch.distributions.Distribution` object. It's up to you!
         """
         if self.discrete:
-            return distributions.Categorical(logits=self.logits_net(obs))
             # TODO: define the forward pass for a policy with a discrete action space.
+            return distributions.Categorical(logits=self.logits_net(obs))
             # pass
         else:
             # TODO: define the forward pass for a policy with a continuous action space.

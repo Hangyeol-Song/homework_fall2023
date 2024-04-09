@@ -48,10 +48,10 @@ class ValueCritic(nn.Module):
         assert predict_value.shape == q_values.shape
         # TODO: update the critic using the observations and q_values
         
-        self.optimizer.zero_grad()
-        
         loss_fn = nn.MSELoss()
         loss = loss_fn(predict_value, q_values)
+
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
