@@ -172,8 +172,8 @@ class PGAgent(nn.Module):
                     #     gae = delta
                     mask[i] = 1 - terminals[i]
                     delta = rewards[i] + self.gamma * values[i+1] * mask[i] - values[i]
-                    gae = delta + self.gamma * self.gae_lambda * gae
-                    advantages[i] = gae
+                    gae = delta + self.gamma * self.gae_lambda * mask[i] * gae
+                    advantages[i] = gae + values[i]
 
                 # remove dummy advantage
                 advantages = advantages[:-1]
