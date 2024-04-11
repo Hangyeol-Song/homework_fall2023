@@ -67,10 +67,11 @@ class PGAgent(nn.Module):
         # TODO: flatten the lists of arrays into single arrays, so that the rest of the code can be written in a vectorized
         # way. obs, actions, rewards, terminals, and q_values should all be arrays with a leading dimension of `batch_size`
         # beyond this point.
-        obs=np.concatenate(obs, axis=0)
-        actions = np.concatenate(actions, axis=0)
-        rewards = np.concatenate(rewards, axis=0)
-        terminals = np.concatenate(terminals, axis=0)
+        obs=np.concatenate(obs)
+        actions = np.concatenate(actions)
+        rewards = np.concatenate(rewards)
+        terminals = np.concatenate(terminals)
+        q_values = np.concatenate(q_values)
         
         # print(q_values.shape)
         # print(obs.shape)    
@@ -107,14 +108,16 @@ class PGAgent(nn.Module):
             # In other words: Q(s_t, a_t) = sum_{t'=0}^T gamma^t' r_{t'}
             # TODO: use the helper function self._discounted_return to calculate the Q-values
             # q_values = None
-            q_values = np.concatenate([self._discounted_return(r) for r in rewards])
+            # q_values = np.concatenate([self._discounted_return(r) for r in rewards])
+            q_values = [np.array(self._discounted_return(reward)) for reward in rewards]
 
         else:
             # Case 2: in reward-to-go PG, we only use the rewards after timestep t to estimate the Q-value for (s_t, a_t).
             # In other words: Q(s_t, a_t) = sum_{t'=t}^T gamma^(t'-t) * r_{t'}
             # TODO: use the helper function self._discounted_reward_to_go to calculate the Q-values
             # q_values = None
-            q_values = np.concatenate([self._discounted_reward_to_go(r) for r in rewards])
+            # q_values = np.concatenate([self._discounted_reward_to_go(r) for r in rewards])
+            q_values = [np.array(self._discounted_reward_to_go(reward)) for reward in rewards]
 
 
         return q_values
@@ -132,7 +135,7 @@ class PGAgent(nn.Module):
         """
         if self.critic is None:
             # TODO: if no baseline, then what are the advantages?
-            advantages = q_values
+            advantages = q_values.copy()
         else:
             # TODO: run the critic and use it as a baseline
             values = ptu.to_numpy(self.critic.forward(ptu.from_numpy(obs)).squeeze())
@@ -169,8 +172,8 @@ class PGAgent(nn.Module):
                     #     gae = delta
                     mask[i] = 1 - terminals[i]
                     delta = rewards[i] + self.gamma * values[i+1] * mask[i] - values[i]
-                    gae = delta + self.gamma * self.gae_lambda * mask[i] * gae
-                    advantages[i] = gae + values[i]
+                    gae = delta + self.gamma * self.gae_lambda * gae
+                    advantages[i] = gae
 
                 # remove dummy advantage
                 advantages = advantages[:-1]
